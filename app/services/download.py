@@ -1,15 +1,15 @@
-# main.py
-
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-import logging
-from datetime import datetime, timedelta
-import requests
 from os.path import join
 from bs4 import BeautifulSoup
+import requests
+from datetime import datetime, timedelta, timezone
+import logging
 
-# Aquí va tu código de la clase Download, solo debes adaptarlo para funcionar como un servicio
+
+__copyright__ = 'Copyright (c) 2021 Ascentio Technologies S.A.'
+
+
 class SessionWithHeaderRedirection(requests.Session):
+
     def __init__(self, username, password):
         super().__init__()
         self.auth = (username, password)
@@ -25,27 +25,55 @@ class SessionWithHeaderRedirection(requests.Session):
                 del headers['Authorization']
         return
 
-class Download:
+class Download(object):
     def __init__(self, log, user, password):
         self._logger = log
+        self.urs_file = None
         self.urs_username = user
         self.urs_password = password
 
     def _logging_oceandata(self):
+        '''
+        Logging with ocean data server
+        '''
         self._logger.info('Logging with ocean data server')
+        self._logger.debug('user name : %s', self.urs_username)
+        self._logger.debug('password : %s', self.urs_password)
         return SessionWithHeaderRedirection(self.urs_username, self.urs_password)
 
     def download(self, base_url, filter_list, filter_date='@today'):
+        """
+        Download files list from ocean data server
+
+        :param base_url: Url including the mission and product's level of the
+            products to download, but no the year and julian day. Example:
+            https://oceandata.sci.gsfc.nasa.gov/Ancillary/Meteorological
+        :type base_url: Str
+        :param filter_list: List of files
+        :type filter_list: List of Str
+        :param filter_date: Date of the products to download.
+        :type filter_date: Str
+        :return:
+        """
+        self._logger.info('Starting to download product list')
+        self._logger.info('- Base url: {}'.format(base_url))
+        self._logger.info('- Filter products: {}'.format(filter_list))
+        self._logger.info('- Filter date: {}'.format(filter_date))
+
         download_date = self._validate_date(filter_date)
         product_list_url = self._build_url(base_url, *download_date)
 
         if filter_list:
             url_list = self._get_file_list(url=product_list_url)
             file_list = self._generate_file_list(filter_list, url_list)
-            if file_list:
+            amount_download_all_file = len(file_list)
+            self._logger.info('Filter completed. With {} items to download'.format(amount_download_all_file))
+            if amount_download_all_file!=0:
                 self._download_file_list(file_list)
-
-    # Aquí incluirías los métodos auxiliares como _download_file_list, _get_file_list, etc.
+            else:
+                self._logger.info('Not files to download')
+        else:
+            self._logger.info('Not files to download')
 
     def _download_file_list(self, file_list):
         """
@@ -142,7 +170,7 @@ class Download:
         :return: parsed date (year and julian day)
         :type return: tuple (year<String>, julian day<String>)
         """
-        #now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         if filter_date == '@today':
             _filter_date = now
             self._logger.info('Date @today set to {}'.format(_filter_date))
@@ -213,25 +241,11 @@ class Download:
         self._logger.info('Parse completed. Returning list with {} items'.format(len(file_list)))
         return file_list
 
-# Modelo para los datos de la solicitud
-class DownloadRequest(BaseModel):
-    base_url: str
-    filter_list: list
-    filter_date: str
-
-# Crear la app FastAPI
-app = FastAPI()
-
-# Logger para el servicio
 logger = logging.getLogger(__name__)
 
-# Ruta para descargar archivos
-@app.post("/download/")
-async def download_files(request: DownloadRequest):
-    try:
-        # Llamamos a la clase Download para ejecutar la descarga
-        file_output = Download(logger, "gcrisnejo", "gcrisnejoA98")
-        file_output.download(request.base_url, request.filter_list, request.filter_date)
-        return {"message": "Download started successfully."}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+file_output = Download(logger, "gcrisnejo", "gcrisnejoA98")
+file_output.download(
+                "https://oceandata.sci.gsfc.nasa.gov/directdataaccess/Ancillary/GLOBAL",
+                ["GMAO_MERRA2.20230628T100000.MET.nc"],
+                "20230628",
+            )
