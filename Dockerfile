@@ -6,6 +6,8 @@ WORKDIR /workdir
 
 COPY requirements.txt /workdir/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements_debug.txt /workdir/requirements_debug.txt
+RUN pip install --no-cache-dir -r requirements_debug.txt
 
 # Copia el contenido local (tu código) al contenedor
 COPY . /workdir

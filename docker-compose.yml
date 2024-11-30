@@ -1,0 +1,20 @@
+version: '3.8'
+name: 'nasa-download'
+
+services:
+  app: &appbase
+    container_name: nasa-download
+    build: .
+    volumes:
+      - .:/workdir
+    ports:
+      - "8000:8000"
+
+  debug:
+    <<: *appbase
+    container_name: nasa-download-debug
+    command: >
+      bash -c "python -Xfrozen_modules=off -m debugpy --wait-for-client --listen 0.0.0.0:5678 -m uvicorn --app-dir /workdir/app main:app --reload --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
+      - "5678:5678"
