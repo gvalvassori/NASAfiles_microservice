@@ -9,9 +9,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY requirements_debug.txt /workdir/requirements_debug.txt
 RUN pip install --no-cache-dir -r requirements_debug.txt
 
-# Copia el contenido local (tu código) al contenedor
+# Copia el contenido local (tu código) al contenedor 
 COPY . /workdir
-
 
 # Expone el puerto donde la app de FastAPI escuchará
 EXPOSE 8000

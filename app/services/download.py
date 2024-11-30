@@ -1,5 +1,6 @@
 from os.path import join
 from bs4 import BeautifulSoup
+from fastapi import HTTPException
 import requests
 from datetime import datetime, timedelta, timezone
 import logging
@@ -70,10 +71,14 @@ class Download(object):
             self._logger.info('Filter completed. With {} items to download'.format(amount_download_all_file))
             if amount_download_all_file!=0:
                 self._download_file_list(file_list)
+                # TODO: implementar guardado en cloud storage / s3
+                # TODO: si viene un parametro que sea local entonces guardarlo localmente
             else:
                 self._logger.info('Not files to download')
+                raise HTTPException(status_code=404, detail='Not files to download')
         else:
             self._logger.info('Not files to download')
+            raise HTTPException(status_code=404, detail='Not files to download')
 
     def _download_file_list(self, file_list):
         """
